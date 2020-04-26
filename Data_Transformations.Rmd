@@ -54,24 +54,31 @@ shapiro.pvalue <- function(a, x){ # define the function to be optimized
 }
 optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE) 
 
-# In conclusion, the optimal power function would be 0.2280655 which gives a SW p-value of 0.004184215 so technically we're still not in the clear
+# In conclusion, the optimal power function would be 0.2280655 which gives a SW p-value of 0.004184215 so technically we're still not in the clear.
 
 ```
 
-#### Advanced transformations
-https://stats.stackexchange.com/questions/1444/how-should-i-transform-non-negative-data-including-zeros
+#### Advanced transformations: IHS and BoxCox from https://stats.stackexchange.com/questions/1444/how-should-i-transform-non-negative-data-including-zeros
+
+##### Also consider more complex modeling techniques: GLMs with poisson distribution, zero-inflated poisson, mixture models, and quantile regression. Let's deal with those later and try transforming first.
 
 ##### Inverse hyperbolic sine (IHS) transformation
 ```{r}
-data$vvhA.IHS = log10(data$vvhA + ((data$vvhA^2 + 1)^(1/2)))
-hist(data$vvhA.IHS)
-qqPlot(data$vvhA.IHS)
-shapiro.test(data$vvhA.IHS)
-
-ihs <- function(x) {
-  y <- log(x + sqrt(x ^ 2 + 1))
-  return(y)
+# IHS is used by economists when there is a jump to people with zero income
+ihs <- function(x, theta) { # define the ISH function
+  #log(theta*x + sqrt((theta^2)*(x^2) + 1))/theta # this should be equivalent to the following
+  (1/theta)*asinh(theta*x)
 }
+
+shapiro.pvalue <- function(theta, x){ # define the function to be optimized
+  x <- ihs(x, theta)
+  shapiro.test(x)$p.value # can separate
+}
+
+optimize(shapiro.pvalue, lower=0.001, upper=50, x=data$vvhA, maximum=TRUE) 
+
+# In conclusion, the optimal theta value would be 2.435218 which gives a SW p-value of 1.269239e-05 so this is worse than power transform.
+
 ```
 
 
