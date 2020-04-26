@@ -49,25 +49,36 @@ for (i in 1:ncol(tran)){ # for each column, make two plots
 # None of these look great but 1/4 is the closest
 # Let's see what the optimum would be to maximize the SW p-value
 
-shapiro.pvalue <- function(a, x){ # define the function to optimize
+shapiro.pvalue <- function(a, x){ # define the function to be optimized
   shapiro.test(x^a)$p.value 
 }
+optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE) 
 
-optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE)
-
-shapiro.test(data$vvhA^0.2280655)
+# In conclusion, the optimal power function would be 0.2280655 which gives a SW p-value of 0.004184215 so technically we're still not in the clear
 
 ```
 
-#### Inverse hyperbolic sine transformation
-```{r}
+#### Advanced transformations
+https://stats.stackexchange.com/questions/1444/how-should-i-transform-non-negative-data-including-zeros
 
+##### Inverse hyperbolic sine (IHS) transformation
+```{r}
+data$vvhA.IHS = log10(data$vvhA + ((data$vvhA^2 + 1)^(1/2)))
+hist(data$vvhA.IHS)
+qqPlot(data$vvhA.IHS)
+shapiro.test(data$vvhA.IHS)
+
+ihs <- function(x) {
+  y <- log(x + sqrt(x ^ 2 + 1))
+  return(y)
+}
 ```
 
 
 #### Box Cox transformation power selection
 ```{r}
-
+#https://www.r-bloggers.com/how-to-detect-heteroscedasticity-and-rectify-it/
+#https://rpubs.com/bskc/288328
 ```
 
 
