@@ -14,17 +14,61 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Load the data.
 ```{r}
 rm(list=ls()) # clear workspace
-data = read.csv("AlaWai_DiscreteBottle.csv") # first drop in repo on github website
+data = read.csv("AlaWai_DiscreteBottle.csv") # first drag/drop in repo on github website
 data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
 data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ```
 
 ### Check out transformations of vvhA
+
+#### Basic transformations
+```{r}
+# Define a set of transformations to test
+n = data$vvhA # nothing
+log = log10(data$vvhA + 1) # add 1 otherwise undefined
+ln = log(data$vvhA + 1)
+sqrt = sqrt(data$vvhA) # reduce powers since right skewed
+cbrt = (data$vvhA)^(1/3)
+fort = (data$vvhA)^(1/4)
+ffrt = (data$vvhA)^(1/5)
+sxrt = (data$vvhA)^(1/6)
+  
+# Combine the output in a data frame
+tran = data.frame(n, log, ln, sqrt, cbrt, fort, ffrt, sxrt)
+
+# Visually inspect each transformation with a histogram and quantile-quantile plot
+# Plot Shapiro-Wilk test result in qq-plot title
+
+par(mfrow=c(4,ncol(tran)/2)) # combine the following plots into one grid
+for (i in 1:ncol(tran)){ # for each column, make two plots
+  hist(tran[,i], xlab=colnames(tran)[i], main = paste("Histogram", colnames(tran)[i], "(vvhA)")) # histogram
+  qqnorm(tran[,i], xlab=colnames(tran)[i], main = paste("SW=", shapiro.test(tran[,i])$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
+  qqline(tran[,i], col = "steelblue", lwd = 2) # perfectly normal line
+}
+
+# None of these look great but 1/4 is the closest
+# Let's see what the optimum would be to maximize the SW p-value
+
+shapiro.pvalue <- function(a, x){ # define the function to optimize
+  shapiro.test(x^a)$p.value 
+}
+
+optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE)
+
+shapiro.test(data$vvhA^0.2280655)
+
+```
+
+#### Inverse hyperbolic sine transformation
 ```{r}
 
 ```
 
 
+#### Box Cox transformation power selection
+```{r}
+
+```
 
 
 
