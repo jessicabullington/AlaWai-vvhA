@@ -65,6 +65,9 @@ optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE)
 ##### Inverse hyperbolic sine (IHS) transformation
 ```{r}
 # IHS is used by economists when there is a jump to people with zero income
+# https://stats.stackexchange.com/questions/78929/how-can-i-estimate-theta-for-the-inverse-hyperbolic-sine-transformation
+# https://stats.stackexchange.com/questions/78929/how-can-i-estimate-theta-for-the-inverse-hyperbolic-sine-transformation
+
 ihs <- function(x, theta) { # define the ISH function
   #log(theta*x + sqrt((theta^2)*(x^2) + 1))/theta # this should be equivalent to the following
   (1/theta)*asinh(theta*x)
@@ -84,8 +87,12 @@ optimize(shapiro.pvalue, lower=0.001, upper=50, x=data$vvhA, maximum=TRUE)
 
 #### Box Cox transformation power selection
 ```{r}
-#https://www.r-bloggers.com/how-to-detect-heteroscedasticity-and-rectify-it/
-#https://rpubs.com/bskc/288328
+# The Box Cox transformation works on the residuals of a linear model. It can improve normality and homoscedasticity (equal variance among different groups).
+# https://www.r-bloggers.com/how-to-detect-heteroscedasticity-and-rectify-it/
+# https://rpubs.com/bskc/288328
+
+
+
 ```
 
 
