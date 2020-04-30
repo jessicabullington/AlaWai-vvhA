@@ -96,7 +96,32 @@ optimize(shapiro.pvalue, lower=0.001, upper=50, x=data$vvhA, maximum=TRUE)
 ```
 
 
+## Salinity
+```{r}
+# Define a set of transformations to test
+n = data$Salinity # nothing
+log = log10(100 - data$Salinity) # add 1 otherwise undefined
+ln = log(100 - data$Salinity)
+sq = data$Salinity^2 # reduce powers since right skewed
+cb = data$Salinity^3
+fo = data$Salinity^4
+ff = data$Salinity^5
+scale_fo = (data$Salinity^4)/10000
+  
+# Combine the output in a data frame
+tran = data.frame(n, log, ln, sq, cb, fo, scale_fo, ff)
 
+# Visually inspect each transformation with a histogram and quantile-quantile plot
+# Plot Shapiro-Wilk test result in qq-plot title
+
+par(mfrow=c(4,ncol(tran)/2)) # combine the following plots into one grid
+for (i in 1:ncol(tran)){ # for each column, make two plots
+  hist(tran[,i], xlab=colnames(tran)[i], main = paste("Histogram", colnames(tran)[i], "(Salinity)")) # histogram
+  qqnorm(tran[,i], xlab=colnames(tran)[i], main = paste("SW=", shapiro.test(tran[,i])$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
+  qqline(tran[,i], col = "steelblue", lwd = 2) # perfectly normal line
+}
+
+```
 
 
 
