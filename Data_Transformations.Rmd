@@ -50,7 +50,7 @@ for (i in 5:ncol(data)){ # for each column, make two plots
   qqline(data[,i]^(1/3), col = "steelblue", lwd = 2) # perfectly normal line
 }
 ```
-#### Conclusion: Cube root works for TotalP, Si, Chl. (Note: squareroot did not and fourth root was slightly better for Chl.) N+N and Depth still skewed!
+#### Conclusion: Cube root works for TotalP, Si, Chl. (Note: squareroot did not and fourth root was slightly better for Chl.) N+N, FCM, and Depth still skewed!
 
 
 ### Check out transformations of vvhA in more detail
