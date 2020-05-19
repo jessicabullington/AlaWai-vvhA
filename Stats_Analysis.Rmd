@@ -9,6 +9,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Load libraries
+```{r}
+library(lme4)
+library(MASS)
+library(car)
+library(MuMIn)
+library(effects)
+library(lmerTest)
+library(mgcv)
+```
+
+
 ### Load the data.
 ```{r}
 rm(list=ls()) # clear workspace
@@ -37,31 +49,41 @@ data$tran.Chl = (data$Chlorophyll)^(1/4)
 
 ### Compare each predictor to vvhA
 ```{r}
-# Histograms of all numerical data
-for (i in 5:ncol(data)){ # for each column, make two plots
-  hist(data[,i]^(1/3), xlab=colnames(data)[i], main = paste("Cubrt Histogram", colnames(data)[i])) 
-  qqnorm(data[,i]^(1/3), xlab=colnames(data)[i], main = paste("SW=", shapiro.test(data[,i]^(1/3))$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
-  qqline(data[,i]^(1/3), col = "steelblue", lwd = 2) # perfectly normal line
+# categorical predictors
+for (i in 2:4){ # for first four columns
+  with(data, plot(tran.vvhA ~ data[,i], xlab=colnames(data)[i]))
 }
+# continuous predictors
+for (i in 19:ncol(data)){ 
+  with(data, plot(tran.vvhA ~ data[,i], xlab=colnames(data)[i]))
+}
+
 ```
+
+```{r}
+# Month linear model
+lm.date = lm(tran.vvhA ~ Date, data=data)
+summary(lm.date)
+ano.date = aov(lm.date)
+TukeyHSD(ano.date)
 ```
 
 
 ### Look for covariance in predictors
 ```{r}
-pairs(~TotalN+Salinity+Temperature+Turbidity+Chlorophyll, data =data)
+pairs(~tran.TN + tran.TP + tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl, data =data) # add N+N, FCM, Depth
 ```
 
 
 ### Model selection
 ```{r}
-#  Generalized mixed effects model----
-data$r.vvhA = round(data$vvhA, digits = 0)
-big.model = glmer(r.vvhA ~ tran.Sal + (tran.Sal)^2 + Temperature + (1|Month), data = data, 
-                  na.action = na.pass, family = binomial)
-sole.dredge = dredge(big.model)
-sole.avg = model.avg(sole.dredge, delta < 4)
-summary(sole.avg)
+big.model = lm(tran.vvhA ~ tran.TN + tran.TP + tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl + Month + Site, data =data)
+
+big.dredge = dredge(big.model)
+#big.avg = model.avg(big.dredge, delta < 4)
+#summary(big.avg)
+
+# add interactions?
 ```
 
 
@@ -70,60 +92,60 @@ summary(sole.avg)
 
 ### Mixed effects reduced model
 ```{r}
-library(lmerTest)
-# lmerTest pipe returns p-values
-mod1 = lmerTest::lmer(tran.vvhA ~ tran.Sal + Temperature + (1|Month), data = data) # interaction not sig
-summary(mod1)
-plot(allEffects(mod1))
-with(data, plot(tran.vvhA~tran.Sal))
-with(data, plot(tran.vvhA~Temperature))
-#residualPlots(mod1) # not for lmer
-Anova(mod1)
-anova(mod1) 
-
-# calculating R2
-# https://jonlefcheck.net/2013/03/13/r2-for-linear-mixed-effects-models/
-r.squaredGLMM(mod1) #marginal is fixed alone, conditional is both fixed and random
-r.squaredLR(mod1)
-r2(mod1)
-
-#Residual plots
-with(data, plot(residuals(mod1, type = "deviance") ~ fitted(mod1), pch = 19, 
-                    main = "Fitted Residual Plot", 
-                    ylab = "Residual", xlab = "Predicted Values"))
-lines(smooth.spline(fitted(mod1), residuals(mod1)), col = 'red')
-#plot(fitted(mod1),  rstandard(mod1)) # doesn't work for lmer
-
-sub.tran.Sal = subset(data$tran.Sal, !is.na(data$tran.Sal))
-with(data, plot(residuals(mod1, type = "deviance") ~ sub.tran.Sal, pch = 1, col = 'black',
-                    main = "Salinity Residual Plot", 
-                    ylab = "Residual", xlab = "tran.Sal"))
-lines(smooth.spline(sub.tran.Sal, residuals(mod1)), col = 'red')
-
-
-sub.temp = subset(data$Temperature, !is.na(data$Temperature))
-with(data, plot(residuals(mod1, type = "deviance") ~ sub.temp, data=data, pch = 1, col = 'black',
-                    main = "Temperature Residual Plot", 
-                    ylab = "Residual", xlab = "Temperature"))
-lines(smooth.spline(sub.temp, residuals(mod1)), col = 'red')
+# library(lmerTest)
+# # lmerTest pipe returns p-values
+# mod1 = lmerTest::lmer(tran.vvhA ~ tran.Sal + Temperature + (1|Month), data = data) # interaction not sig
+# summary(mod1)
+# plot(allEffects(mod1))
+# with(data, plot(tran.vvhA~tran.Sal))
+# with(data, plot(tran.vvhA~Temperature))
+# #residualPlots(mod1) # not for lmer
+# Anova(mod1)
+# anova(mod1) 
+# 
+# # calculating R2
+# # https://jonlefcheck.net/2013/03/13/r2-for-linear-mixed-effects-models/
+# r.squaredGLMM(mod1) #marginal is fixed alone, conditional is both fixed and random
+# r.squaredLR(mod1)
+# r2(mod1)
+# 
+# #Residual plots
+# with(data, plot(residuals(mod1, type = "deviance") ~ fitted(mod1), pch = 19, 
+#                     main = "Fitted Residual Plot", 
+#                     ylab = "Residual", xlab = "Predicted Values"))
+# lines(smooth.spline(fitted(mod1), residuals(mod1)), col = 'red')
+# #plot(fitted(mod1),  rstandard(mod1)) # doesn't work for lmer
+# 
+# sub.tran.Sal = subset(data$tran.Sal, !is.na(data$tran.Sal))
+# with(data, plot(residuals(mod1, type = "deviance") ~ sub.tran.Sal, pch = 1, col = 'black',
+#                     main = "Salinity Residual Plot", 
+#                     ylab = "Residual", xlab = "tran.Sal"))
+# lines(smooth.spline(sub.tran.Sal, residuals(mod1)), col = 'red')
+# 
+# 
+# sub.temp = subset(data$Temperature, !is.na(data$Temperature))
+# with(data, plot(residuals(mod1, type = "deviance") ~ sub.temp, data=data, pch = 1, col = 'black',
+#                     main = "Temperature Residual Plot", 
+#                     ylab = "Residual", xlab = "Temperature"))
+# lines(smooth.spline(sub.temp, residuals(mod1)), col = 'red')
 ```
 
 
 ### Model prediction
 ```{r}
-# Predict new data from sensors
-myData = read.csv("allSensor_Site.csv")
-myData$tran.Sal = log10(100-myData$Salinity..PSU.)
-myData$Temperature = myData$Temperature1..C.
-myData$Month = myData$Cruise
-
-newdata = myData[, c("Temperature","tran.Sal","Month")]
-
-myData$predicted = predict(mod1, newdata=newdata)
-myData$vvhA.predicted = (myData$predicted)^5
-
-#myData$predicted2 = predict.gam(model.3, newdata=newdata, type="response") #same output as predict()
-write.csv(myData, "allSensor_Site_vvhApredicted.csv", row.names = F)
+# # Predict new data from sensors
+# myData = read.csv("allSensor_Site.csv")
+# myData$tran.Sal = log10(100-myData$Salinity..PSU.)
+# myData$Temperature = myData$Temperature1..C.
+# myData$Month = myData$Cruise
+# 
+# newdata = myData[, c("Temperature","tran.Sal","Month")]
+# 
+# myData$predicted = predict(mod1, newdata=newdata)
+# myData$vvhA.predicted = (myData$predicted)^5
+# 
+# #myData$predicted2 = predict.gam(model.3, newdata=newdata, type="response") #same output as predict()
+# write.csv(myData, "allSensor_Site_vvhApredicted.csv", row.names = F)
 ```
 
 
