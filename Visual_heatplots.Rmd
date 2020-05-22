@@ -45,9 +45,21 @@ data$tran.Chl = (data$Chlorophyll)^(1/4)
 #### vvhA heatplot
 ```{r}
 library(ggplot2)
-ggplot(data, aes(x = Date, y = Abundance, fill = Phylum)) + 
-  facet_grid(Station~.) +
-  geom_tile()
+library(viridis) 
+
+ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = vvhA)) +
+  scale_fill_viridis(name = "Raw vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(0,600),breaks = c(200, 400, 600))  +
+  facet_grid(Date ~.) 
+  
+  theme(axis.text.y = element_text(size = 10, angle = 0, hjust = 1, vjust=0.2), axis.title.y = element_blank(),
+        legend.position = "right", axis.ticks = element_blank(),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.text.x = element_text(size = 10, angle = 90, hjust = 1, vjust=0.2))
+  
+  
 
 
 heatmap.SAR324.het.log <- ggplot(data = df.sarh10, aes(x = Clade, y = Sample)) +
