@@ -11,6 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### This document explores transformations of my Ala Wai Canal V. vulnificus dataset in the hopes of identifying appropriate transformations for all environmental predictors and response variable (vvhA copies per mL).
 
+### Clear workspace
+```{r}
+rm(list=ls()) # clear environment
+```
+
+
 ### Load the data.
 ```{r}
 rm(list=ls()) # clear workspace
@@ -23,7 +29,7 @@ data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ### Explore the data visually
 ```{r}
 # Histograms of all numerical data
-for (i in 5:ncol(data)){ # for each column, make two plots
+for (i in 16:ncol(data)){ # for each column, make two plots
   hist(data[,i], xlab=colnames(data)[i], main = paste("Histogram", colnames(data)[i])) 
   qqnorm(data[,i], xlab=colnames(data)[i], main = paste("SW=", shapiro.test(data[,i])$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
   qqline(data[,i], col = "steelblue", lwd = 2) # perfectly normal line
@@ -34,7 +40,7 @@ for (i in 5:ncol(data)){ # for each column, make two plots
 
 ```{r}
 # Histograms of all numerical data
-for (i in 5:ncol(data)){ # for each column, make two plots
+for (i in 16:ncol(data)){ # for each column, make two plots
   hist(log10(data[,i]+1), xlab=colnames(data)[i], main = paste("Log10 +1 Histogram", colnames(data)[i])) 
   qqnorm(log10(data[,i]+1), xlab=colnames(data)[i], main = paste("SW=", shapiro.test(log10(data[,i]+1))$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
   qqline(log10(data[,i]+1), col = "steelblue", lwd = 2) # perfectly normal line
@@ -44,7 +50,7 @@ for (i in 5:ncol(data)){ # for each column, make two plots
 
 ```{r}
 # Histograms of all numerical data
-for (i in 5:ncol(data)){ # for each column, make two plots
+for (i in 16:ncol(data)){ # for each column, make two plots
   hist(data[,i]^(1/3), xlab=colnames(data)[i], main = paste("Cubrt Histogram", colnames(data)[i])) 
   qqnorm(data[,i]^(1/3), xlab=colnames(data)[i], main = paste("SW=", shapiro.test(data[,i]^(1/3))$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
   qqline(data[,i]^(1/3), col = "steelblue", lwd = 2) # perfectly normal line
@@ -90,6 +96,45 @@ optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE)
 
 # In conclusion, the optimal power function would be 0.2280655 which gives a SW p-value of 0.004184215 so technically we're still not in the clear.
 
+```
+
+#### Basic transformations ~~ Testing the raw data before 500 copy cutoff
+```{r}
+# Define a set of transformations to test
+n = data$RAWvvhA # nothing
+log = log10(data$RAWvvhA + 1) # add 1 otherwise undefined
+ln = log(data$RAWvvhA + 1)
+sqrt = sqrt(data$RAWvvhA) # reduce powers since right skewed
+cbrt = (data$RAWvvhA)^(1/3)
+fort = (data$RAWvvhA)^(1/4)
+ffrt = (data$RAWvvhA)^(1/5)
+sxrt = (data$RAWvvhA)^(1/6)
+  
+# Combine the output in a data frame
+tran = data.frame(n, log, ln, sqrt, cbrt, fort, ffrt, sxrt)
+
+# Visually inspect each transformation with a histogram and quantile-quantile plot
+# Plot Shapiro-Wilk test result in qq-plot title
+
+par(mfrow=c(4,ncol(tran)/2)) # combine the following plots into one grid
+for (i in 1:ncol(tran)){ # for each column, make two plots
+  hist(tran[,i], xlab=colnames(tran)[i], main = paste("Histogram", colnames(tran)[i], "(RAWvvhA)")) # histogram
+  qqnorm(tran[,i], xlab=colnames(tran)[i], main = paste("SW=", shapiro.test(tran[,i])$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
+  qqline(tran[,i], col = "steelblue", lwd = 2) # perfectly normal line
+}
+
+# None of these look great but 1/4 is the closest
+# Let's see what the optimum would be to maximize the SW p-value
+
+shapiro.pvalue <- function(a, x){ # define the function to be optimized
+  shapiro.test(x^a)$p.value 
+}
+optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE) 
+
+# Sticking with fourth root, which values are outliers
+data$tran.RAWvvhA = data$RAWvvhA^(1/4)
+outlier <- data[ which(data$tran.RAWvvhA > (mean(data$tran.RAWvvhA, na.rm = TRUE) + (2*sd(data$tran.RAWvvhA, na.rm = TRUE)))),]
+mean(data$tran.RAWvvhA)
 ```
 
 #### Advanced transformations: IHS and BoxCox from https://stats.stackexchange.com/questions/1444/how-should-i-transform-non-negative-data-including-zeros

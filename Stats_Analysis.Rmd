@@ -9,6 +9,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Clear workspace
+```{r}
+rm(list=ls()) # clear environment
+```
+
+
 ### Load libraries
 ```{r}
 library(lme4)
@@ -50,12 +56,22 @@ data$tran.Chl = (data$Chlorophyll)^(1/4)
 ### Compare each predictor to vvhA
 ```{r}
 # categorical predictors
-for (i in 2:4){ # for first four columns
-  with(data, plot(tran.vvhA ~ data[,i], xlab=colnames(data)[i]))
+cat = c(1,11,12)
+for (i in 1:3){ # for first four columns
+  with(data, plot(tran.vvhA ~ data[,cat[i]], xlab=colnames(data)[cat[i]])) # transformed vvhA
 }
-# continuous predictors
-for (i in 19:ncol(data)){ 
-  with(data, plot(tran.vvhA ~ data[,i], xlab=colnames(data)[i]))
+
+for (i in 1:3){ # for first four columns
+  with(data, plot(vvhA ~ data[,cat[i]], xlab=colnames(data)[cat[i]])) # untransformed vvhA
+}
+
+# continuous predictors (transformed and untransformed)
+for (i in 15:ncol(data)){ 
+  with(data, plot(tran.vvhA ~ data[,i], xlab=colnames(data)[i])) # transformed vvhA
+}
+
+for (i in 15:ncol(data)){ 
+  with(data, plot(vvhA ~ data[,i], xlab=colnames(data)[i])) # untransformed vvhA
 }
 
 ```
