@@ -173,7 +173,9 @@ optimize(shapiro.pvalue, lower=0.001, upper=50, x=data$vvhA, maximum=TRUE)
 # https://www.r-bloggers.com/how-to-detect-heteroscedasticity-and-rectify-it/
 # https://rpubs.com/bskc/288328
 
-
+distBCMod <- caret::BoxCoxTrans(cars$dist)
+print(distBCMod)
+cars <- cbind(cars, dist_new=predict(distBCMod, cars$dist)) # append the transformed variable to cars
 
 ```
 
