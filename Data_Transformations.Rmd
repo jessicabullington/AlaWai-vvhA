@@ -11,17 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### This document explores transformations of my Ala Wai Canal V. vulnificus dataset in the hopes of identifying appropriate transformations for all environmental predictors and response variable (vvhA copies per mL).
 
-### Clear workspace
-```{r}
-rm(list=ls()) # clear environment
-```
-
-
 ### Load the data.
 ```{r}
 rm(list=ls()) # clear workspace
 data = read.csv("AlaWai_DiscreteBottle.csv") # first drag/drop in repo on github website
-data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
+#data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
 data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ```
 
@@ -96,6 +90,15 @@ optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE)
 
 # In conclusion, the optimal power function would be 0.2280655 which gives a SW p-value of 0.004184215 so technically we're still not in the clear.
 
+# Sticking with fourth root, which values are outliers
+data$tran.vvhA = data$vvhA^(1/4)
+outlier <- data[ which(data$tran.vvhA > (mean(data$tran.vvhA, na.rm = TRUE) + (2*sd(data$tran.vvhA, na.rm = TRUE)))),]
+trim.data = data[ which(data$tran.vvhA < (mean(data$tran.vvhA, na.rm = TRUE) + (2*sd(data$tran.vvhA, na.rm = TRUE)))),]
+#hist(trim.data$vvhA^(1/4))
+#shapiro.test(trim.data$vvhA^(1/4))
+
+# No outliers based on 3 SD. Already removed probable instrument error by 500 copy/ml cutoff.
+
 ```
 
 #### Basic transformations ~~ Testing the raw data before 500 copy cutoff
@@ -129,12 +132,12 @@ for (i in 1:ncol(tran)){ # for each column, make two plots
 shapiro.pvalue <- function(a, x){ # define the function to be optimized
   shapiro.test(x^a)$p.value 
 }
-optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$vvhA, maximum=TRUE) 
+optimize(shapiro.pvalue, lower=0.01, upper=1, x=data$RAWvvhA, maximum=TRUE) 
 
 # Sticking with fourth root, which values are outliers
-data$tran.RAWvvhA = data$RAWvvhA^(1/4)
+data$tran.RAWvvhA = data$RAWvvhA^(1/6)
 outlier <- data[ which(data$tran.RAWvvhA > (mean(data$tran.RAWvvhA, na.rm = TRUE) + (2*sd(data$tran.RAWvvhA, na.rm = TRUE)))),]
-mean(data$tran.RAWvvhA)
+
 ```
 
 #### Advanced transformations: IHS and BoxCox from https://stats.stackexchange.com/questions/1444/how-should-i-transform-non-negative-data-including-zeros

@@ -9,16 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Clear workspace
-```{r}
-rm(list=ls()) # clear environment
-```
-
 ### Load the data
 ```{r}
 rm(list=ls()) # clear workspace
 data = read.csv("AlaWai_DiscreteBottle.csv") # first drag/drop in repo on github website
-data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
+#data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
 data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ```
 
@@ -43,41 +38,69 @@ data$tran.Chl = (data$Chlorophyll)^(1/4)
 ### Heatplots separated by month
 
 #### vvhA heatplot
-```{r}
+```{r fig.width = 5, fig.height = 8}
 library(ggplot2)
 library(viridis) 
 
-ggplot(data, aes(x = Site, y = SampleDepth)) + 
+# Specify the order of the date factor so that the plot is in order
+data$MonthYear = factor(data$MonthYear, levels= c("October 2018", "November 2018", "January 2019", "February 2019", "March 2019", "April 2019", "June 2019", "August 2019", "September 2019"))
+
+# Raw vvhA copies/mL
+heat.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
   geom_tile(aes(fill = vvhA)) +
   scale_fill_viridis(name = "Raw vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
-                     limits = c(0,600),breaks = c(200, 400, 600))  +
-  facet_grid(Date ~.) 
+                     limits = c(0,500), breaks = c(125, 250, 375, 500))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
   
-  theme(axis.text.y = element_text(size = 10, angle = 0, hjust = 1, vjust=0.2), axis.title.y = element_blank(),
-        legend.position = "right", axis.ticks = element_blank(),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), 
-        axis.text.x = element_text(size = 10, angle = 90, hjust = 1, vjust=0.2))
+# Transformed vvhA copies/mL
+heat.tran.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = tran.vvhA)) +
+  scale_fill_viridis(name = "vvhA copies/mL ^ (1/4)", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(0,5), breaks = c(1, 2, 3, 4, 5))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic()+
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
   
-  
+# Z-scored vvhA copies/mL ((x-mean)/sd) ~ deviation from the mean
+# using z-score so that colorbar will be equivalent for all parameters (like jmp)
+# consider changing to a binary color palette
+data$zsc.tran.vvhA = (data$tran.vvhA - mean(data$tran.vvhA,na.rm=T))/ sd(data$tran.vvhA,na.rm=T)
+heat.zsc.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = zsc.tran.vvhA)) +
+  scale_fill_viridis(name = "Z-scored vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(-2.5,2.5),breaks = c(-2, -1, 0, 1, 2))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
+heat.vvhA.depth.site
+heat.tran.vvhA.depth.site
+heat.zsc.vvhA.depth.site
 
-heatmap.SAR324.het.log <- ggplot(data = df.sarh10, aes(x = Clade, y = Sample)) +
-  geom_tile(aes(fill = RelAbund)) +
-  scale_fill_viridis(name = "log10 Percent Abundance", na.value = 'white', option="inferno", direction = -1,
-                     limits = c(0,1.5),breaks = c(0.5, 1.0, 1.5))  +
-  scale_y_discrete(position = "right") +
-  xlab("SAR324") +
-  theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
-        legend.position = "top", axis.ticks = element_blank(),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), 
-        axis.text.x = element_text(size = 10, angle = 90, hjust = 1, vjust=0.2))
+# Save the plots to a PDF
+# copy paste the following code to the console
+
+# pdf("heat.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
+# print(heat.vvhA.depth.site)
+# dev.off()
+# system("open heat.vvhA.depth.site.21May2020.pdf")
+# 
+# pdf("heat.tran.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
+# print(heat.tran.vvhA.depth.site)
+# dev.off()
+# system("open heat.tran.vvhA.depth.site.21May2020.pdf")
+# 
+# pdf("heat.zsc.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
+# print(heat.zsc.vvhA.depth.site)
+# dev.off()
+# system("open heat.zsc.vvhA.depth.site.21May2020.pdf")
 ```
 
 ### Dendrogram
 ```{r}
-# z-score noraml data
+# z-score normal data
 
 
 ```

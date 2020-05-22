@@ -9,12 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Clear workspace
-```{r}
-rm(list=ls()) # clear environment
-```
-
-
 ### Load libraries
 ```{r}
 library(lme4)
