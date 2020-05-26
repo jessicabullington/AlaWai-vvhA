@@ -23,7 +23,7 @@ data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ### Explore the data visually
 ```{r}
 # Histograms of all numerical data
-for (i in 16:ncol(data)){ # for each column, make two plots
+for (i in 15:ncol(data)){ # for each column, make two plots
   hist(data[,i], xlab=colnames(data)[i], main = paste("Histogram", colnames(data)[i])) 
   qqnorm(data[,i], xlab=colnames(data)[i], main = paste("SW=", shapiro.test(data[,i])$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
   qqline(data[,i], col = "steelblue", lwd = 2) # perfectly normal line
@@ -34,7 +34,7 @@ for (i in 16:ncol(data)){ # for each column, make two plots
 
 ```{r}
 # Histograms of all numerical data
-for (i in 16:ncol(data)){ # for each column, make two plots
+for (i in 15:ncol(data)){ # for each column, make two plots
   hist(log10(data[,i]+1), xlab=colnames(data)[i], main = paste("Log10 +1 Histogram", colnames(data)[i])) 
   qqnorm(log10(data[,i]+1), xlab=colnames(data)[i], main = paste("SW=", shapiro.test(log10(data[,i]+1))$p.value), pch = 1, frame = FALSE) # qq-plot with SW p-value
   qqline(log10(data[,i]+1), col = "steelblue", lwd = 2) # perfectly normal line
