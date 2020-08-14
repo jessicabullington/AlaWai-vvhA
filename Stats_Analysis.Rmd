@@ -18,21 +18,28 @@ library(MuMIn)
 library(effects)
 library(lmerTest)
 library(mgcv)
+library(lme4)
+library(pbkrtest) 
+library(nlme)
+library(vegan)
 ```
 
 
 ### Load the data.
+
 ```{r}
 rm(list=ls()) # clear workspace
 data = read.csv("AlaWai_DiscreteBottle.csv") # first drag/drop in repo on github website
-data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
+#data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
 data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
 ```
 
 ### Transformations
+
 ```{r}
 # make a new column for each transformation
 data$tran.vvhA = (data$vvhA)^(1/4)
+data$log.vvhA = log10(data$vvhA+1)
 data$tran.TN = log10(data$TotalN+1)
 data$tran.TP = (data$TotalP)^(1/3)
 data$tran.Si = (data$Si)^(1/3)
@@ -45,9 +52,181 @@ data$tran.Temp = data$Temperature
 data$tran.Turb = log10(data$Turbidity+1)
 data$tran.Chl = (data$Chlorophyll)^(1/4)
 # Depth?
+data$tran.MarineHumic = data$MarineHumic.like^(1/3)
+data$tran.Tyrosine.like = data$Tyrosine.like^(1/3)
+
+write.csv(data, "AlaWai_DiscreteBottle_Tran.csv", row.names=F)
 ```
 
+### Spatial and temporal variability of vvhA
+
+```{r}
+# Month Season Site Distance SampleDepth Depth and interactions
+
+# Month Site SampleDepth
+sdata = subset(data, !is.na(data$vvhA))
+mod1 = lm(tran.vvhA ~ Month + Site + SampleDepth + Month:Site + Month:SampleDepth + Site:SampleDepth, data = sdata)
+anova(mod1)
+```
+
+```{r}
+# Month
+
+# Exclude NA data for vvhA
+sdata = subset(data, !is.na(data$vvhA))
+
+# Define standard error
+se = function(x) sd(x)/sqrt(length(x))
+
+# Summarise data by month
+myData <- aggregate(sdata$log.vvhA,
+    by = list(month = sdata$MonthYear),
+    FUN = function(x) c(mean = mean(x), se = se(x)))
+
+myData <- do.call(data.frame, myData)
+
+colnames(myData) <- c("MonthYear", "mean", "se")
+
+myData$MonthYear = factor(myData$MonthYear, levels= c("October 2018", "November 2018", "January 2019", 
+                                                  "February 2019", "March 2019", "April 2019", "June 2019", 
+                                                  "August 2019", "September 2019"))
+levels(myData$MonthYear) = c("Oct. 2018", "Nov. 2018", "Jan. 2019", 
+                           "Feb. 2019", "Mar. 2019", "Apr. 2019", 
+                           "Jun. 2019", "Aug. 2019", "Sep. 2019")
+
+ggplot(myData, aes(x = MonthYear, y = mean)) +
+    geom_col(stat = "identity", fill = "white", col ="black")  +
+    ggtitle("") + 
+    ylab("Log vvhA copies/mL") +
+    xlab("") +
+    geom_errorbar(aes(ymin = mean - se*2, ymax = mean + se*2), width = 0.2) +
+    theme_classic()
+
+month.mod = lm(tran.vvhA ~ MonthYear, data=sdata)
+summary(month.mod)
+anova(month.mod)
+```
+
+```{r}
+# Season
+
+# Exclude NA data for vvhA
+sdata = subset(data, !is.na(data$vvhA))
+
+# Define standard error
+se = function(x) sd(x)/sqrt(length(x))
+
+# Summarise data by month
+myData <- aggregate(sdata$log.vvhA,
+    by = list(season = sdata$DateSeasonStream),
+    FUN = function(x) c(mean = mean(x), se = se(x)))
+
+myData <- do.call(data.frame, myData)
+
+colnames(myData) <- c("season", "mean", "se")
+
+ggplot(myData, aes(x = season, y = mean)) +
+    geom_col(stat = "identity", fill = "white", col ="black")  +
+    ggtitle("") + 
+    ylab("Log vvhA copies/mL") +
+    xlab("") +
+    geom_errorbar(aes(ymin = mean - se*2, ymax = mean + se*2), width = 0.2) +
+    theme_classic()
+
+seas.mod = lm(tran.vvhA ~ X7DayDischargeSeason, data=sdata)
+summary(seas.mod)
+anova(seas.mod)
+
+seas2.mod = lm(tran.vvhA ~ DateSeasonStream, data=sdata)
+summary(seas2.mod)
+anova(seas2.mod)
+```
+
+
+```{r}
+# Site
+
+# Exclude NA data for vvhA
+sdata = subset(data, !is.na(data$vvhA))
+
+# Define standard error
+se = function(x) sd(x)/sqrt(length(x))
+
+# Summarise data by month
+myData <- aggregate(sdata$log.vvhA,
+    by = list(season = sdata$Site),
+    FUN = function(x) c(mean = mean(x), se = se(x)))
+
+myData <- do.call(data.frame, myData)
+
+colnames(myData) <- c("site", "mean", "se")
+
+ggplot(myData, aes(x = site, y = mean)) +
+    geom_col(stat = "identity", fill = "white", col ="black")  +
+    ggtitle("") + 
+    ylab("Log vvhA copies/mL") +
+    xlab("") +
+    geom_errorbar(aes(ymin = mean - se*2, ymax = mean + se*2), width = 0.2) +
+    theme_classic()
+
+site.mod = lm(tran.vvhA ~ Site, data=sdata)
+summary(site.mod)
+anova(site.mod)
+
+```
+
+```{r}
+# SampleDepth
+
+# Exclude NA data for vvhA
+sdata = subset(data, !is.na(data$vvhA))
+
+# Define standard error
+se = function(x) sd(x)/sqrt(length(x))
+
+# Summarise data by month
+myData <- aggregate(sdata$log.vvhA,
+    by = list(season = sdata$SampleDepth),
+    FUN = function(x) c(mean = mean(x), se = se(x)))
+
+myData <- do.call(data.frame, myData)
+
+colnames(myData) <- c("depth", "mean", "se")
+
+ggplot(myData, aes(x = depth, y = mean)) +
+    geom_col(stat = "identity", fill = "white", col ="black")  +
+    ggtitle("") + 
+    ylab("Log vvhA copies/mL") +
+    xlab("") +
+    geom_errorbar(aes(ymin = mean - se*2, ymax = mean + se*2), width = 0.2) +
+    theme_classic()
+
+dep.mod = lm(tran.vvhA ~ SampleDepth, data=sdata)
+summary(dep.mod)
+anova(dep.mod)
+TukeyHSD(aov(dep.mod))
+```
+
+```{r}
+# Distance
+with(sdata, plot(log.vvhA~Distance, ylab = "Log vvhA copies/mL",
+                 xlab = "Distance (m)"))
+dis.mod = lm(tran.vvhA ~ Distance, data=sdata)
+summary(dis.mod)
+```
+
+```{r}
+# Depth
+ddata = subset(sdata, !is.na(sdata$Depth))
+with(ddata, plot(log.vvhA~Depth, ylab = "Log vvhA copies/mL",
+                 xlab = "Depth (m)"))
+dep.mod = lm(tran.vvhA ~ log10(Depth+1), data=ddata)
+summary(dep.mod)
+```
+
+
 ### Compare each predictor to vvhA
+
 ```{r}
 # categorical predictors
 
@@ -74,6 +253,48 @@ for (i in 15:ncol(data)){
 
 ```
 
+
+### Test effect of each predictor individually
+
+```{r}
+# Try doing a loop
+var = c("SampleName", "tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "tran.MarineHumic", "tran.Tyrosine.like")
+dredge.data = data[var]
+colnames(dredge.data) <- c("ID", "vvhA", "TN", "TP", "Si", "DOC", "POC", "S", "T", "Turb", "Chl", "M", "B")
+#dredge.data = subset(dredge.data, !is.na(data$vvhA)) 
+
+p.values = vector()
+f.values = vector()
+R2 = vector()
+Adj.R2 = vector()
+
+for (i in 3:ncol(dredge.data)){
+  model.test = lm(vvhA ~ dredge.data[,i], data = dredge.data, na.action=na.exclude)
+  anova.test = anova(model.test)
+  p.values[i] = anova.test$`Pr(>F)`[1]
+  f.values[i] = anova.test$`F value`[1]
+  R2[i] = summary(model.test)$r.squared
+  Adj.R2[i] = summary(model.test)$adj.r.squared
+}
+p.values = p.values[-1:-2]
+adj.p.values = p.adjust(p.values, method="BH")
+f.values = f.values[-1:-2]
+R2 = R2[-1:-2]
+Adj.R2 = Adj.R2[-1:-2]
+
+table = data.frame(colnames(dredge.data[3:ncol(dredge.data)]), f.values, p.values, adj.p.values, R2, Adj.R2)
+
+names(table)[1]<-"Predictor"
+
+round.table = table
+for (i in 2:ncol(round.table)){
+  round.table[,i] = round(round.table[,i], digits = 3)
+}
+
+write.csv(round.table, "Chem.predictors.pval.csv", row.names =F)
+```
+
+
 ```{r}
 # Month linear model
 lm.date = lm(tran.vvhA ~ Date, data=data)
@@ -84,12 +305,88 @@ TukeyHSD(ano.date)
 
 
 ### Look for covariance in predictors
+
 ```{r}
 pairs(~tran.TN + tran.TP + tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl, data =data) # add N+N, FCM, Depth
 ```
 
+```{r}
+# PCA
+var = c("tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "tran.MarineHumic", "tran.Tyrosine.like")
+dredge.data = data[var]
+colnames(dredge.data) <- c("TN", "TP", "Si", "DOC", "POC", "S", "T", "Turb", "Chl", "M", "B")
+dredge.data = na.omit(dredge.data)
+pca = princomp(dredge.data, cor = TRUE)
+summary(pca)
+loadings(pca)
+par(mfrow = c(1,2))
+biplot(pca, pch = 21, col = c('grey', 'blue'), scale = 0)
+biplot(pca, choices=c(3,4), pch = 21, col = c('grey', 'blue'), scale = 0)
+```
+
+```{r}
+# NMDS with continuous environmental correlates 
+ord2 = metaMDS(dredge.data, dist = "bray", trymax = 20, k=2)
+par(mfrow = c(1,1))
+fit = envfit(ord2 ~ TN + TP + Si + DOC + POC + S + T + Turb + Chl + M + B, data = dredge.data, na.rm = T)
+fit
+ordiplot(ord2, display = "sites", type = 'n', main = 'nmds 2D') 
+points(ord2, col = 'grey')
+plot(fit, col = 'red', arrow.mul = 0.7)
+```
+```{r}
+# Dendrogram
+# Export to jmp
+var = c("SampleName", "Month", "tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "tran.MarineHumic", "tran.Tyrosine.like")
+dredge.data = data[var]
+colnames(dredge.data) <- c("ID", "Month", "vvhA", "TN", "TP", "Si", "DOC", "POC", "S", "T", "Turb", "Chl", "M", "B")
+dredge.data = na.omit(dredge.data)
+write.csv(dredge.data, "dendrogram.csv", row.names =F)
+```
+
+```{r}
+# Pairs again
+var = c("tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "tran.MarineHumic", "tran.Tyrosine.like")
+dredge.data = data[var]
+colnames(dredge.data) <- c("TN", "TP", "Si", "DOC", "POC", "S", "T", "Turb", "Chl", "M", "B")
+pairs(~ TN + TP + Si + DOC + POC + S + T + Turb + Chl + M + B, data = dredge.data)
+```
+
 
 ### Model selection
+
+```{r}
+# Subset the data to only the variables being tested
+var = c("SampleName", "Month", "DateSeasonStream", "tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "tran.MarineHumic", "tran.Tyrosine.like")
+dredge.data = data[var]
+colnames(dredge.data) <- c("ID", "Month", "Season", "vvhA", "TN", "TP", "Si", "DOC", "POC", "S", "T", "Turb", "Chl", "M", "B")
+dredge.data = na.omit(dredge.data) # Note that dredge cannot handle missing values anywhere
+
+# Fit a big model that includes all predictors
+big.model = lm(vvhA ~ Si + DOC + POC + S + T + Turb + M + B + Month, data = dredge.data)
+
+# LRT
+summary(big.model)
+Anova(big.model) # note don't use lower case anova (type I)
+
+# All possible model combinations
+big.dredge = dredge(big.model, extra = "R^2")
+
+# Model selection based on AIC (rather than stepwise)
+sel.table = model.sel(big.dredge)
+head(sel.table, n=20)
+
+#distribution of akaike weights
+with(sel.table, hist(weight))
+
+# Multimodel inference
+big.avg = model.avg(big.dredge, delta < 4)
+summary(big.avg)
+confint(big.avg)
+importance(big.avg)
+```
+
+
 ```{r}
 # Note that dredge cannot handle missing values
 var = c("tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "Month", "Site")

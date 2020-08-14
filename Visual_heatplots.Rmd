@@ -12,16 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Load the data
 ```{r}
 rm(list=ls()) # clear workspace
-data = read.csv("AlaWai_DiscreteBottle.csv") # first drag/drop in repo on github website
-#data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
-data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
+data = read.csv("AlaWai_DiscreteBottle_20200806.csv") # first drag/drop in repo on github website
+#data = subset(data, !is.na(data$vvhA_ND)) # keep only rows with observations for vvhA_ND
+data$vvhA_ND = as.numeric(data$vvhA_ND) # change the class type to numeric
 ```
 
 ### Transformations
 ```{r}
 # make a new column for each transformation
-data$tran.vvhA = (data$vvhA)^(1/4)
-data$log.vvhA = log10(data$vvhA + 1)
+data$tran.vvhA_ND = (data$vvhA_ND)^(1/4)
+data$log.vvhA_ND = log10(data$vvhA_ND + 1)
 data$tran.TN = log10(data$TotalN+1)
 data$tran.TP = (data$TotalP)^(1/3)
 data$tran.Si = (data$Si)^(1/3)
@@ -30,15 +30,15 @@ data$tran.DOC = log10(data$DOC+1)
 data$tran.POC = log10(data$POC+1)
 # FCM?
 data$tran.Sal = (data$Salinity^4)/10000 # dividing by 10000 removes the scaling issue with lm
-data$tran.Temp = data$Temperature
-data$tran.Turb = log10(data$Turbidity+1)
-data$tran.Chl = (data$Chlorophyll)^(1/4)
+data$tran.Temp = data$TemperatureCTD
+data$tran.Turb = log10(data$TurbidityNTU+1)
+data$tran.Chl = (data$Chlorophyll_ugL)^(1/4)
 # Depth?
 ```
 
 ### Heatplots separated by month
 
-#### vvhA heatplot
+#### vvhA_ND heatplot
 ```{r fig.width = 5, fig.height = 8}
 library(ggplot2)
 library(viridis) 
@@ -50,78 +50,132 @@ data$MonthYear = factor(data$MonthYear, levels= c("October 2018", "November 2018
 #                            "Aug-19", "Sep-19")
 
 # Check the range for colorbars
-range(data$vvhA, na.rm=T)
-range(data$tran.vvhA, na.rm=T)
-range(data$log.vvhA, na.rm=T)
+range(data$vvhA_ND, na.rm=T)
+range(data$tran.vvhA_ND, na.rm=T)
+range(data$log.vvhA_ND, na.rm=T)
 
-# Raw vvhA copies/mL
-heat.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
-  geom_tile(aes(fill = vvhA)) +
-  scale_fill_viridis(name = "Raw vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
+# Raw vvhA_ND copies/mL
+heat.vvhA_ND.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = vvhA_ND)) +
+  scale_fill_viridis(name = "Raw vvhA_ND copies/mL", na.value = 'white', option="inferno", direction = -1,
                      limits = c(0,500), breaks = c(125, 250, 375, 500))  +
   facet_grid(MonthYear ~.) +
   theme_classic() +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-  
-# Transformed vvhA copies/mL
-heat.tran.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
-  geom_tile(aes(fill = tran.vvhA)) +
-  scale_fill_viridis(name = "vvhA copies/mL ^ (1/4)", na.value = 'white', option="inferno", direction = -1,
+
+# Transformed vvhA_ND copies/mL
+heat.tran.vvhA_ND.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = tran.vvhA_ND)) +
+  scale_fill_viridis(name = "vvhA_ND copies/mL ^ (1/4)", na.value = 'white', option="inferno", direction = -1,
                      limits = c(0,5), breaks = c(1, 2, 3, 4, 5))  +
   facet_grid(MonthYear ~.) +
   theme_classic()+
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
-# Log vvhA copies/mL
-heat.log.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
-  geom_tile(aes(fill = log.vvhA)) +
-  scale_fill_viridis(name = "log vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
+# Log vvhA_ND copies/mL
+heat.log.vvhA_ND.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = log.vvhA_ND)) +
+  scale_fill_viridis(name = "log vvhA_ND copies/mL", na.value = 'white', option="inferno", direction = -1,
                      limits = c(0,3), breaks = c(1, 2, 3))  +
   facet_grid(MonthYear ~.) +
   theme_classic()+
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
   
-# Z-scored vvhA copies/mL ((x-mean)/sd) ~ deviation from the mean
+# Z-scored vvhA_ND copies/mL ((x-mean)/sd) ~ deviation from the mean
 # using z-score so that colorbar will be equivalent for all parameters (like jmp)
 # consider changing to a binary color palette
-data$zsc.tran.vvhA = (data$tran.vvhA - mean(data$tran.vvhA,na.rm=T))/ sd(data$tran.vvhA,na.rm=T)
-range(data$zsc.tran.vvhA, na.rm=T)
-heat.zsc.vvhA.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
-  geom_tile(aes(fill = zsc.tran.vvhA)) +
-  scale_fill_viridis(name = "Z-scored vvhA copies/mL", na.value = 'white', option="inferno", direction = -1,
+data$zsc.tran.vvhA_ND = (data$tran.vvhA_ND - mean(data$tran.vvhA_ND,na.rm=T))/sd(data$tran.vvhA_ND,na.rm=T)
+range(data$zsc.tran.vvhA_ND, na.rm=T)
+heat.zsc.vvhA_ND.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = zsc.tran.vvhA_ND)) +
+  scale_fill_viridis(name = "Z-scored vvhA_ND copies/mL", na.value = 'white', option="inferno", direction = -1,
                      limits = c(-2.5,2.5),breaks = c(-2, -1, 0, 1, 2))  +
   facet_grid(MonthYear ~.) +
   theme_classic() +
   theme(axis.title.x = element_blank(), axis.title.y = element_blank())
 
-heat.vvhA.depth.site
-heat.tran.vvhA.depth.site
-heat.log.vvhA.depth.site
-heat.zsc.vvhA.depth.site
+heat.vvhA_ND.depth.site
+heat.tran.vvhA_ND.depth.site
+heat.log.vvhA_ND.depth.site
+heat.zsc.vvhA_ND.depth.site
 
 # Save the plots to a PDF
 # copy paste the following code to the console
 
-pdf("heat.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
-print(heat.vvhA.depth.site)
+pdf("heat.vvhA_ND.depth.site.21May2020.pdf", height = 11, width = 8.5)
+print(heat.vvhA_ND.depth.site)
 dev.off()
-system("open heat.vvhA.depth.site.21May2020.pdf")
+system("open heat.vvhA_ND.depth.site.21May2020.pdf")
 
-pdf("heat.tran.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
-print(heat.tran.vvhA.depth.site)
+pdf("heat.tran.vvhA_ND.depth.site.21May2020.pdf", height = 11, width = 8.5)
+print(heat.tran.vvhA_ND.depth.site)
 dev.off()
-system("open heat.tran.vvhA.depth.site.21May2020.pdf")
+system("open heat.tran.vvhA_ND.depth.site.21May2020.pdf")
 
-pdf("heat.log.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
-print(heat.log.vvhA.depth.site)
+pdf("heat.log.vvhA_ND.depth.site.21May2020.pdf", height = 11, width = 8.5)
+print(heat.log.vvhA_ND.depth.site)
 dev.off()
-system("open heat.log.vvhA.depth.site.21May2020.pdf")
+system("open heat.log.vvhA_ND.depth.site.21May2020.pdf")
 
-pdf("heat.zsc.vvhA.depth.site.21May2020.pdf", height = 11, width = 8.5)
-print(heat.zsc.vvhA.depth.site)
+pdf("heat.zsc.vvhA_ND.depth.site.21May2020.pdf", height = 11, width = 8.5)
+print(heat.zsc.vvhA_ND.depth.site)
 dev.off()
-system("open heat.zsc.vvhA.depth.site.21May2020.pdf")
+system("open heat.zsc.vvhA_ND.depth.site.21May2020.pdf")
 ```
+
+
+# Other varibles
+```{r fig.width = 5, fig.height = 8}
+range(data$Si, na.rm =T)
+
+heat.Si.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = Si)) +
+  scale_fill_viridis(name = "Raw Si ", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(0,500), breaks = c(125, 250, 375, 500))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+heat.Si.depth.site
+
+range(data$HIX, na.rm =T)
+
+heat.HIX.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = HIX)) +
+  scale_fill_viridis(name = "HIX", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(0,8), breaks = c(2,4,6))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+heat.HIX.depth.site
+
+range(data$Salinity, na.rm =T)
+
+heat.Sal.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = Salinity)) +
+  scale_fill_viridis(name = "Salinity", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(6,40), breaks = c(10,20,30,40))  +
+  facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+heat.Sal.depth.site
+```
+
+```{r}
+heat.Sal.depth.site = ggplot(data, aes(x = Site, y = SampleDepth)) + 
+  geom_tile(aes(fill = Salinity)) +
+  scale_fill_viridis(name = "Salinity", na.value = 'white', option="inferno", direction = -1,
+                     limits = c(6,40), breaks = c(10,20,30,40))  +
+  #facet_grid(MonthYear ~.) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+
+heat.Sal.depth.site
+```
+
+
 
 ### Dendrogram
 ```{r}

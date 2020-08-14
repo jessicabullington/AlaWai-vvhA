@@ -9,22 +9,162 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+### Load the data
+```{r}
+rm(list=ls()) # clear workspace
+data = read.csv("AlaWai_DiscreteBottle_20200728.csv") # first drag/drop in repo on github website
+#data = subset(data, !is.na(data$vvhA)) # keep only rows with observations for vvhA
+data$vvhA = as.numeric(data$vvhA) # change the class type to numeric
+data$vvhA_ND = as.numeric(data$vvhA_ND) # change the class type to numeric
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+### Transformations
+```{r}
+# make a new column for each transformation
+data$tran.vvhA = (data$vvhA)^(1/4)
+data$tran.vvhA_ND = log10(data$vvhA_ND)
+data$tran.TN = log10(data$TotalN+1)
+data$tran.TP = (data$TotalP)^(1/3)
+data$tran.Si = (data$Si)^(1/3)
+# N+N?
+data$tran.DOC = log10(data$DOC+1)
+data$tran.POC = log10(data$POC+1)
+# FCM?
+data$tran.Sal = (data$Salinity^4)/10000 # dividing by 10000 removes the scaling issue with lm
+data$tran.Temp = data$Temperature
+data$tran.Turb = log10(data$Turbidity+1)
+data$tran.Chl = (data$Chlorophyll)^(1/4)
+# Depth?
+#write.csv(data, "AlaWaiDiscreteBottle_transforms_21May2020.csv")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Look for covariance in predictors
+```{r fig.width = 9, fig.height = 8}
+pairs(~tran.TN + tran.TP + tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl, data =data) # add N+N, FCM, Depth
+```
+
+
+### Model selection
+```{r}
+library(MuMIn)
+# Subset the data to only the variables being tested
+var = c("tran.vvhA_ND",  "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "Month", "Site")
+dredge.data = data[var]
+dredge.data = na.omit(dredge.data) # Note that dredge cannot handle missing values
+
+# Fit a big model that includes all predictors
+options(na.action = "na.fail")
+big.model = lm(tran.vvhA_ND ~ tran.TN + tran.TP + tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl, data =dredge.data)
+
+# LRT
+summary(big.model)
+
+# All possible model combinations
+big.dredge = dredge(big.model, extra = "R^2")
+
+# Model selection based on AIC (rather than stepwise)
+head(model.sel(big.dredge), n=20)
+
+# Multimodel inference
+big.avg = model.avg(big.dredge, delta < 4)
+summary(big.avg)
+confint(big.avg)
+importance(big.avg)
+# add interactions?
+```
+
+#### Conclusion: Site is not useful. Month, salinity, turbidity important based on LRT. Month, salinity, silicate, temperature, total phosphorous important based on AIC. However, salnitiy and temperautre correlate with the nutrients which might be problematic for AIC.
+
+### Model selection with limited model
+```{r fig.width = 9, fig.height = 8}
+# remove correlating predictors
+# remove site
+# add season and habitat? ~ instead of month and site
+
+pairs(~tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb, data =data) # add N+N, FCM, Depth
+
+# Subset the data to only the variables being tested
+# Need to run on same dataset to compare AIC above
+# var = c("tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "Month", "Site")
+# dredge.data = data[var]
+# dredge.data = na.omit(dredge.data) # Note that dredge cannot handle missing values
+
+# Fit a big model that includes all predictors
+options(na.action = "na.fail") # no missin values
+big.model = lm(tran.vvhA_ND ~ tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb, data =dredge.data)
+
+# LRT
+summary(big.model)
+
+# All possible model combinations
+big.dredge = dredge(big.model, extra = "R^2")
+
+# Model selection based on AIC (rather than stepwise)
+head(model.sel(big.dredge), n=20)
+
+# Multimodel inference
+big.avg = model.avg(big.dredge, delta < 4)
+summary(big.avg)
+confint(big.avg)
+importance(big.avg)
+```
+
+#### Conclusion: Month, salinity, and temperature are important based on LRT. Month, salinity, silicate, and temperature are important based on AIC.
+
+### Test interaction
+```{r}
+# Fit a big model that includes all predictors
+options(na.action = "na.fail") # no missin values
+big.model = lm(tran.vvhA ~ tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + Month + tran.Sal:Month, data =dredge.data)
+
+# LRT
+summary(big.model)
+
+# All possible model combinations
+big.dredge = dredge(big.model, extra = "R^2")
+
+# Model selection based on AIC (rather than stepwise)
+head(model.sel(big.dredge), n=20)
+
+# Multimodel inference
+big.avg = model.avg(big.dredge, delta < 4)
+summary(big.avg)
+confint(big.avg)
+importance(big.avg)
+```
+
+#### Conclusion: You can use interactions with dredge. Month has a significant interaction with salinity (not temp). Possibly run interactions on best model at end.
+
+### Add fDOM
+```{r fig.width = 9, fig.height = 8}
+data$tran.Humic = data$MarineHumic.like^(1/3)
+data$tran.Protein = data$Tyrosine.like^(1/3)
+  
+pairs(~tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Humic + tran.Protein, data =data)
+
+# Subset the data to only the variables being tested
+var = c("tran.vvhA", "tran.TN", "tran.TP", "tran.Si", "tran.DOC", "tran.POC", "tran.Sal", "tran.Temp", "tran.Turb", "tran.Chl", "Month", "tran.Humic", "tran.Protein")
+dredge.data = data[var]
+dredge.data = na.omit(dredge.data) # Note that dredge cannot handle missing values
+
+# Fit a big model that includes all predictors
+options(na.action = "na.fail")
+big.model = lm(tran.vvhA ~ tran.Si + tran.DOC + tran.POC + tran.Sal + tran.Temp + tran.Turb + tran.Chl + Month + tran.Humic + tran.Protein, data =dredge.data)
+
+# LRT
+summary(big.model)
+
+# All possible model combinations
+big.dredge = dredge(big.model, extra = "R^2")
+
+# Model selection based on AIC (rather than stepwise)
+head(model.sel(big.dredge), n=20)
+
+# Multimodel inference
+big.avg = model.avg(big.dredge, delta < 4)
+summary(big.avg)
+confint(big.avg)
+importance(big.avg)
+```
